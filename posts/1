@@ -1,0 +1,237 @@
+
+SQLi - Union Attacks and Overcoming Illegal Collation Mixes
+
+** This post covers manual exploitation for CVE-XXX-XXX - which was discovered in 2020 and has been fixed as of version ###.
+
+Finding a SQL injection opportunity
+
+Crafting a payload for a SQLi is sometimes tricky depending on where in the query you are able to inject. The closer to the front of the statement you are able to inject the less you have to worry about.
+
+I recently ran into this situation when trying to carry out a union attack to lift usernames and password hashes.
+
+
+I'll briefly cover the vulnerable function from a white-box perspective. 
+
+We will also switch to a black-box perspective and cover how an attacker might use various methods to probe the database structure to build a successful union attack.
+
+Finally, we will talk about various methods to overcome illegal collation mix errors.
+
+
+
+ERPNext is built in python using the Frappe framework. The frappe framework uses a python decorator (@frappe.whitelist) to "whitelist" methods that can be called by a user. If the allow_guest parameter is True - an unauthenticated user can call the method directly.
+
+```python
+@frappe.whitelist(allow_guest=True)
+def web_search(text, scope=None, start=0, limit=20):
+	"""
+	Search for given text in __global_search where published = 1
+	:param text: phrase to be searched
+	:param scope: search only in this route, for e.g /docs
+	:param start: start results at, default 0
+	:param limit: number of results to return, default 20
+	:return: Array of result objects
+	"""
+
+	results = []
+	texts = text.split('&')
+	for text in texts:
+		common_query = ''' SELECT `doctype`, `name`, `content`, `title`, `route`
+			FROM `__global_search`
+			WHERE {conditions}
+			LIMIT {limit} OFFSET {start}'''
+
+		scope_condition = '`route` like "{}%" AND '.format(scope) if scope else ''
+		published_condition = '`published` = 1 AND '
+		mariadb_conditions = postgres_conditions = ' '.join([published_condition, scope_condition])
+
+		# https://mariadb.com/kb/en/library/full-text-index-overview/#in-boolean-mode
+		text = '"{}"'.format(text)
+		mariadb_conditions += 'MATCH(`content`) AGAINST ({} IN BOOLEAN MODE)'.format(frappe.db.escape(text))
+		postgres_conditions += 'TO_TSVECTOR("content") @@ PLAINTO_TSQUERY({})'.format(frappe.db.escape(text))
+
+		result = frappe.db.multisql({
+			'mariadb': common_query.format(conditions=mariadb_conditions, limit=limit, start=start),
+			'postgres': common_query.format(conditions=postgres_conditions, limit=limit, start=start)
+		}, as_dict=True)
+		tmp_result=[]
+		for i in result:
+			if i in results or not results:
+				tmp_result.append(i)
+		results += tmp_result
+
+	# chart of accounts -> {chart, of, accounts}
+	# titles that match the most of these words will have high relevance
+	words = set(get_distinct_words(text))
+	for r in results:
+		title_words = set(get_distinct_words(r.title))
+		words_match = len(words.intersection(title_words))
+		r.relevance = words_match
+
+	results = sorted(results, key=lambda x: x.relevance, reverse=True)
+	return results
+```
+
+
+We can call the web_search method unauthenticated by passing it in the cmd post body.
+![[Pasted image 20221104152245.png]]
+
+Reviewing the source code - we can see that the function requires one parameter (text) and has 3 additional optional parameters we can tinker with (scope, start, limit).
+
+If we try passing some text to the text variable we get an empty list returned.
+![[Pasted image 20221104153311.png]]
+
+Reviewing the database logs we can see that our text is being placed into the SQL query - the escaped quotations surrounding our text hints that our text may be getting ran through some form of input sanitization before being added to the query.
+![[Pasted image 20221104153429.png]]
+
+Taking a look back at the code - we can confirm that our text data appears to be ran through "frappe.db.escape" which sanitizes the input.
+
+```python
+text = '"{}"'.format(text)
+		mariadb_conditions += 'MATCH(`content`) AGAINST ({} IN BOOLEAN MODE)'.format(frappe.db.escape(text))
+		postgres_conditions += 'TO_TSVECTOR("content") @@ PLAINTO_TSQUERY({})'.format(frappe.db.escape(text))
+```
+
+What about the other 3 optional parameters? (scope, start, limit) If any of these were going to be passed to a SQL query - we would expect these inputs to also be ran through the same santization functions, right?
+
+It appears the value of the scope parameter is string substituted into a SQL query string without being ran through the sanitizer.
+```python
+scope_condition = '`route` like "{}%" AND '.format(scope) if scope else ''
+		published_condition = '`published` = 1 AND '
+		mariadb_conditions = postgres_conditions = ' '.join([published_condition, scope_condition])
+```
+
+Modifying our payload - we can confirm we now have SQLi.
+![[Pasted image 20221104154339.png]]
+![[Pasted image 20221104154425.png]]
+
+At this point - we have a lot of options for further exploitation. For the purposes of this post, we will try and extract user info from the database using a UNION query.
+
+UNION queries allow us to execute one or more SELECT queries and add those results to the original query. Combined with the SQLi, this is powerful as it allows us to arbitrarily return more data from the database than the application intended.
+
+UNION attacks have a few pre-requisites: 
+
+First, the application needs to return data in some format to the user, the point of a union attack is to return more data than what is intended so we need to be able to see the data being returned. In our use case - it appears that this web_search method returns results back to the client which should fulfill this requirement.
+
+Second, the individual queries in the UNION query must return the same number of columns that are expected by the SELECT query. Since we have a SQLi, we can add random values to pad out our column count if we are too short.
+
+Third, the data types in each column must be compatible with the individual queries. This means that if a column is declared as an int, we can only append integers into the column. Depending on the data that we are looking to append, this may be a serious limitation.
+
+Thankfully, our columns are varchar data types so we shouldn't have any issue with the string data that makes up the user data we are after. You might be wondering, what if all of the columns were a non-compatible data type - like int? Even though it's a major pain - we can use various other methods to extract that data despite the limitations. ###?
+
+All of the conditions required to carry out a union attack appear to be present.
+
+
+
+Let's take a minute and cover how an attacker with no access to the underlying database might probe around to identify some of this information.
+
+Using Order By to determine column count
+
+One technique is using ORDER BY to figure out column count through error-based testing.
+
+An ORDER BY 6 - returns a SQL error
+![[Pasted image 20221104161206.png]]
+An ORDER BY 5 - doesn't return a SQL error. We can conclude that since the query was successful - there are 5 columns being returned.
+![[Pasted image 20221104161217.png]]
+
+
+Now an attacker needs to determine what data types each column can contain. This is a trial and error approach that also relies on error-based testing. Knowing that they need have to have 5 columns, they try passing in 5 string values. The server returns these values in the 5 columns which indicates that those columns all support strings.
+
+![[Pasted image 20221104161548.png]]
+
+With all of this information, we are now ready to extract user data from the database. In the frappe application - user data is stored in the \_\_Auth database table. 
+![[Pasted image 20221104151455.png]]
+
+![[Pasted image 20221104161919.png]]
+
+Our attempt was unsuccessful and returns an interesting error.
+```
+InternalError: (1271, \\\"Illegal mix of collations for operation 'UNION'\\\")\\n\"]"
+```
+
+Collations are essentially a set of rules that define how the SQL server stores, retrieves, and compares data.
+
+One option to overcome collation mismatches is to force a specific collation in the SELECT part of the query:
+
+```sql
+SELECT 
+   comment COLLATE utf8_general_ci
+FROM comments
+UNION
+SELECT 
+   comment
+FROM videos
+```
+
+Unfortunately for us, our injection point is far from the SELECT statement.
+
+Another option for us is to use the COLLATE clause within our UNION Select - but we need to know what the collation is for 
+
+
+
+We can see how the table we are pulling data from and the overall database were created and what collation type was used. Both the \_\_Auth table and database are set with the collation of **utf8mb4_unicode_ci**. 
+
+```
+show create table __Auth;
+| Table  | Create Table                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+| __Auth | CREATE TABLE `__Auth` (
+  `doctype` varchar(140) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `fieldname` varchar(140) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `encrypted` int(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`doctype`,`name`,`fieldname`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=COMPRESSED |
+
+
+show create database _1bd3e0294da19198;
+| Database          | Create Database                                                                                          
+| _1bd3e0294da19198 | CREATE DATABASE `_1bd3e0294da19198` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ |
+
+```
+
+Looking at the SQL query in the database logs - we see that first SELECT statement is pulling FROM the __global_search table.
+![[Pasted image 20221104170827.png]]
+
+When we look at the table creation for \_\_global_search we notice a few things. The ENGINE is "MyISAM" which is different compared to our other tables (InnoDB). We also notice that the default charset is set but no collation is explicitly set. 
+
+```
+show create table __global_search;
+| Table           | Create Table                                                                                                                                                                                                                                                                                                                                                                               
+| __global_search | CREATE TABLE `__global_search` (
+  `doctype` varchar(100) DEFAULT NULL,
+  `name` varchar(140) DEFAULT NULL,
+  `title` varchar(140) DEFAULT NULL,
+  `content` text DEFAULT NULL,
+  `route` varchar(140) DEFAULT NULL,
+  `published` int(1) NOT NULL DEFAULT 0,
+  UNIQUE KEY `doctype_name` (`doctype`,`name`),
+  FULLTEXT KEY `content` (`content`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 |
+
+```
+
+
+We need to determine what the default collation is for this table as one hasn't been explicitly set. We can use `show character set` and look for any occurences of the charset the table was set with.
+
+![[Pasted image 20221104171144.png]]
+
+Looks like there is definitely a collation mismatch between the table where the original columns are being pulled from \_\_global_search and the union select in our \_\_Auth table.
+
+We can adjust our UNION attack to specify the collation type for each column and success!
+![[Pasted image 20221104171615.png]]
+
+
+Having full access to the database has made it easy to deal with the collation mismatch. In a black-box scenario, this process is still possible but very time consuming to retrieve via our SQLi. While studying this, I learned of an easier way to overcome this situation.
+
+MYSQL has a built-in function, HEX, which returns a hexadecimal string representation of a string. Each byte of each character is converted to 2 hexademical digits. Similarly, the built-in function UNHEX performs the inverse operation.
+
+In our SQLi payload - we can use the HEX function to transform our username and password strings into hexadecimal and then use UNHEX to return them to string format. The benefit of doing this is that when UNHEX is called, MySQL converts it back to a string and the original collation type is not considered any more.
+
+No need to figure out what collation types are set, we can just let MYSQL handle it for us!
+
+![[../images/Pasted image 20221104172311.png]]
+
+
+
+Fun reading if you want to dive deep into collation and charsets!
+http://mysql.rjweb.org/doc.php/charcoll
