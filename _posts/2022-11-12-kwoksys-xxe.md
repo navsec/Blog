@@ -258,7 +258,7 @@ External entities can also point to remote locations, such as a web service runn
 #### Patch Review
 
 After reporting this to the Kwoksys team - they quickly deployed a patch [2.9.5.SP31] which addresses this.
-![[Pasted image 20221112104410.png]]
+![Image](/images/2022-11-12-kwoksys-xxe/Pastedimage20221112104410.png)
 
 As this is an open source project, let's review the mitigations implemented by the developers.
 
