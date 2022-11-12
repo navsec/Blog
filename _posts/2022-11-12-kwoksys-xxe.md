@@ -262,7 +262,7 @@ After reporting this to the Kwoksys team - they quickly deployed a patch [2.9.5.
 
 As this is an open source project, let's review the mitigations implemented by the developers.
 
-![[Pasted image 20221112142936.png]]
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112142936.png)
 
 The developers manually overrided 'IS_SUPPORTING_EXTERNAL_ENTITIES' to false to disable all support for external entities effectively eliminating the XXE vulnerability.
 
