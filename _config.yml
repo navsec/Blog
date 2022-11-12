@@ -28,7 +28,7 @@ minima:
 # Build settings
 theme: minima
 
-minma:
+minima:
   skin: dark
 
 plugins:
