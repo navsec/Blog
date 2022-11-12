@@ -28,6 +28,9 @@ minima:
 # Build settings
 theme: minima
 
+minma:
+  skin: dark
+
 plugins:
  - jekyll-feed
  - jekyll-seo-tag
