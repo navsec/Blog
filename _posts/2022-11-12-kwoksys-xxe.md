@@ -3,6 +3,7 @@ title: "CVE-2022-45326 - Disclosure"
 date: 2022-11-12
 ---
 [CVE-2022-45326](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-45326)
+
 Affecting Kwoksys < v2.9.5.SP31
 
 *Disclosed with permission from the Kwoksys development team*
