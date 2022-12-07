@@ -1,10 +1,9 @@
 ---
-title: "CVE-2022-45326 Disclosure"
-
+title: "CVE-2022-45326 - Disclosure"
 date: 2022-11-12
 ---
-CVE-2022-45326 Disclosure
-Kwoksys < v2.9.5.SP31
+[CVE-2022-45326](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-45326)
+Affecting Kwoksys < v2.9.5.SP31
 
 *Disclosed with permission from the Kwoksys development team*
 <hr>
@@ -49,6 +48,8 @@ Here's an example of a basic RSS feed in XML format:
 ```
 
 As a security researcher this is definitely a component that deserves further attention. Since the RSS feed has to support XML data, we can infer that some form of XML parsing is being done server-side. If the XML parser is weakly configured - we might be able to achieve XXE (XML External Entity) injection. For more information on XXE vulnerabilities: [OWASP - XXE](https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing)
+
+<hr>
 
 ### Code Review
 Decompiling the kwok-2.9.5.jar in JD-GUI, we see that logic for the RSS parser is contained under com.kwoksys.framework.parsers.rss.
@@ -193,6 +194,7 @@ public void xmlToModel(String xmlString) throws Exception {
 
 After reviewing the code - there is no manual configuration of the **IS_SUPPORTING_EXTERNAL_ENTITIES** property. As such - the XMLInputFactory will use its default configuration which support external entities. This parser should be vulnerable to XXE.
 
+<hr>
 
 ## **Exploitation**
 
@@ -236,6 +238,8 @@ We have successfully exploited an external entity injection vulnerability. By ch
 To speed up exploitation, we can build a python script to change the XML payload based on whatever file we specify, trigger a refresh of the RSS feed, then make a follow-up request to retrieve the new blog content and parse the response for the external entity. This provides us with a read-only psuedo shell to the system! Much faster!
 ![Image](/images/2022-11-12-kwoksys-xxe/Pastedimage20221112141409.png)
 
+<hr>
+
 ### Impact
 
 XXE vulnerabilities are included in the OWASP Top 10 and are usually classified as high severity. As we've covered, XXE can be used to arbitrarily retrieve the content of files on the server. Some of these files may contain sensitive information or contain application/service credentials that could help an attacker escalate to RCE. In the event that the underlying application is built with PHP - RCE is directly possible through PHP's expect wrapper: [PHP - From XXE to RCE](https://airman604.medium.com/from-xxe-to-rce-with-php-expect-the-missing-link-a18c265ea4c7)
@@ -244,6 +248,7 @@ Another concern related to XXE vulnerabilities is that of SSRF (Server-Side Requ
 
 As an example, let's say that the Kwoksys system can reach other systems within its internal network that are inaccessible to an attacker. An attacker would be able to leverage XXE to make requests from the Kwoksys server to another server within its internal network. Another option is using a blind time-based approach - where an attacker could use XXE to systematically map out an internal network to see what hosts are alive/responsive based on the time it takes for the server to process an external entity to a remote server and return that response back to the client.
 
+<hr>
 
 ### Patch Review
 
@@ -255,6 +260,7 @@ As this is an open source project, let's review the mitigations implemented by t
 
 The developers manually overrided 'IS_SUPPORTING_EXTERNAL_ENTITIES' to false to disable all support for external entities effectively eliminating the XXE vulnerability.
 
+<hr>
 
 ### Key Takeaways
 
@@ -264,6 +270,7 @@ From the security research perspective - when hunting for vulnerabilities, your 
 
 Thank you for reading!
 
+<hr>
 
 ### Exploit PoC
 ```python
