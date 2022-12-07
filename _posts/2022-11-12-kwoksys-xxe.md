@@ -1,8 +1,10 @@
 ---
-title: "CVE-2022-45326 Disclosure"
-Kwoksys < v2.9.5.SP31
+title: "Kwoksys 2.9.5 XXE "
+
 date: 2022-11-12
 ---
+CVE-2022-45326 Disclosure
+Kwoksys < v2.9.5.SP31
 
 *Disclosed with permission from the Kwoksys development team*
 <hr>
