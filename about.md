@@ -25,5 +25,4 @@ https://keyserver.pgp.com - navsec
 ![Image](/images/about/OSCP_Blog.png)
   
 ![Image](/images/about/GCIA_Blog.png)
-
 ![Image](/images/about/CCNA_Blog.png)
