@@ -1,12 +1,12 @@
 ---
 layout: page
-title: About
+title: About Me
 permalink: /about/
 ---
 
 Thanks for reading my blog,
 
-For as long as I can remember I've had a special interest in manipulating technology to accomplish purposes outside of their intended use. This blog is dedicated to highlighting my independent security research. My focus is on exploring the offensive side of cybersecurity while providing valuable context that can help improve defensive strategy. I am a firm believer that understanding bad actors methods and tactics is key to developing strong defenses. By taking a proactive approach and studying the offensive side of cybersecurity, we can gain a deeper understanding of potential threats and improve our ability to protect against them. In my opinion, a strong offense is the foundation of a solid defense.
+For as long as I can remember I've had a special interest in manipulating technology to accomplish purposes outside of its intended use. This blog is dedicated to highlighting my independent security research. My focus is on exploring the offensive side of cybersecurity while providing valuable context that can help improve defensive strategy. I am a firm believer that understanding bad actors methods and tactics is key to developing strong defenses. By taking a proactive approach and studying the offensive side of cybersecurity, we can gain a deeper understanding of potential threats and improve our ability to protect against them. In my opinion, a strong offense is the foundation of a solid defense.
 
 My professional experience includes extensive work in egress security, operating global large-scale forward/reverse proxy services, and managing email security gateways. The nature of my work provides me the opportunity to consult on various technologies and closely interface with development teams.
 
@@ -25,3 +25,5 @@ https://keyserver.pgp.com - navsec
 ![Image](/images/about/OSCP_Blog.png)
   
 ![Image](/images/about/GCIA_Blog.png)
+
+![Image](/images/about/CCNA_Blog.png)
