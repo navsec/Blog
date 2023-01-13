@@ -19,30 +19,31 @@ During a incident, responders are likely collecting and documenting any URLs tha
 For demonstration purposes, I've compiled a small list of how different chat applications handle URL previews to demonstrate how this would work.
 
 Sharing a URL in discord - there is no visual indication that a URL preview was generated unlike other chat applications.
+
 ![Image](/images/2023-1-13-url-previews/Pasted image 20230113003849.png)
 
 However, we do observe an incoming request from Discord hit our web service.
+
 ![Image](/images/2023-1-13-url-previews/Pasted image 20230113003917.png)
 
 Sharing a URL in Teams
+
 ![Image](/images/2023-1-13-url-previews/Pasted image 20230113154705.png)
 
 Interesting enough, the user-agent included in this one is for SkypeUriPreview. Microsoft looks to be reusing the same URL preview service for Skype within Microsoft teams as well.
+
 ![Image](/images/2023-1-13-url-previews/Pasted image 20230113155036.png)
 
 Sharing a URL in Steam messages - Just for fun :)
-![Image](/images/2023-1-13-url-previews/![[Pasted image 20230113155503.png)
+
+![Image](/images/2023-1-13-url-previews/!Pasted image 20230113155503.png)
 
 Steam actually makes two requests, one for HEAD and then another to retrieve more information
-![Image](/images/2023-1-13-url-previews/![[Pasted image 20230113155601.png)
 
-![Image](/images/2023-1-13-url-previews/![[Pasted image 20230113155621.png)
+![Image](/images/2023-1-13-url-previews/!Pasted image 20230113155601.png)
+
+![Image](/images/2023-1-13-url-previews/!Pasted image 20230113155621.png)
 
 It is crucial to always sanitize/disarm/defang URLs before sharing them internally. If an operator is monitoring logs and sees abnormal bot hits - its a strong indication that they are being talked about / watched and an attacker might alter their behavior or accelerate their plans if they believe they are on the clock.
 
 Responders may be able to use this to their advantage by spoofing a user agent for something that an attacker may already be expecting to see hit their web server. For example, if the delivery method was email - it might not raise alarm bells for the attacker to see supposed url preview requests coming from O365 or Microsoft ranges. The attacker might have a resonable expectation that some form of URL inspection/sandboxing is to be expected. This might allow responders a better opportunity to analyze the callback site or collect samples without tipping off the attacker as long as the request can be originated from a reasonable range.
-
-
-
-
-
