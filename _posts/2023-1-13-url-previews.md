@@ -36,13 +36,13 @@ Interesting enough, the user-agent included in this one is for SkypeUriPreview. 
 
 Sharing a URL in Steam messages - Just for fun :)
 
-![Image](/images/2023-1-13-url-previews/!Pasted image 20230113155503.png)
+![Image](/images/2023-1-13-url-previews/Pasted image 20230113155503.png)
 
 Steam actually makes two requests, one for HEAD and then another to retrieve more information
 
-![Image](/images/2023-1-13-url-previews/!Pasted image 20230113155601.png)
+![Image](/images/2023-1-13-url-previews/Pasted image 20230113155601.png)
 
-![Image](/images/2023-1-13-url-previews/!Pasted image 20230113155621.png)
+![Image](/images/2023-1-13-url-previews/Pasted image 20230113155621.png)
 
 It is crucial to always sanitize/disarm/defang URLs before sharing them internally. If an operator is monitoring logs and sees abnormal bot hits - its a strong indication that they are being talked about / watched and an attacker might alter their behavior or accelerate their plans if they believe they are on the clock.
 
