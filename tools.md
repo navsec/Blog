@@ -1,12 +1,8 @@
----
-layout: page
-title: Tools
-permalink: /tools/
----
+
 
 <hr>
 
-<a href="https://reflector.navsec.net">Reflector</a>
+<a href="">Reflector</a>
 
 ![Image](/images/tools/reflector-tool.png)
 
