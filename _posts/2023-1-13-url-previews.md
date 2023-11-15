@@ -1,5 +1,5 @@
 ---
-title: "URL Previews - Detecting Incident Responders"
+title: "Burned by URL Previews"
 date: 2023-1-13
 ---
 
