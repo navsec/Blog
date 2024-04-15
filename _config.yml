@@ -7,27 +7,14 @@ description: > # this means to ignore newlines until "show_excerpts:"
 
 show_excerpts: false # set to true to show excerpts on the homepage
 
-# Minima date format
-# refer to https://shopify.github.io/liquid/filters/date/ if you want to customize this
-minima:
-  date_format: "%b %-d, %Y"
+header_pages:
+  - index.md
 
-  # generate social links in footer
-  social_links:
-    - { platform: github,         user_url: "https://github.com/navsec" }
-    - { platform: twitter,        user_url: "https://twitter.com/_navsec" }
-    - { platform: youtube,        user_url: "https://www.youtube.com/" }
+style: hacker
 
-# If you want to link only specific pages in your header, uncomment
-# this and add the path to the pages in order as they should show up
-#header_pages:
-# - about.md
-
-# Build settings
-theme: minima
-
-minima:
-  skin: dark
+# Build Settings
+markdown: kramdown
+remote_theme: b2a3e8/jekyll-theme-console
 
 plugins:
  - jekyll-feed
