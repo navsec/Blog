@@ -4,3 +4,19 @@ title = 'navsec'
 [module]
   [[module.imports]]
     path = "github.com/hugo-sid/hugo-blog-awesome"
+
+
+
+[Languages.en-gb.params.author]
+  avatar = "moon.png"
+  intro = "Technical Writeups"
+  name = "navsec"
+  description = "Blog"
+
+[[params.socialIcons]]
+name = "github"
+url = "https://github.com/navsec"
+
+[[params.socialIcons]]
+name = "twitter"
+url = "https://twitter.com/navsec_"
