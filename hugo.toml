@@ -1,0 +1,6 @@
+baseURL = 'https://www.navsec.net/'
+languageCode = 'en-us'
+title = 'navsec'
+[module]
+  [[module.imports]]
+    path = "github.com/hugo-sid/hugo-blog-awesome"
