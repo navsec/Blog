@@ -1,6 +1,6 @@
 ---
 title: "Burned by URL Previews"
-date: 2023-1-13
+date: 2023-01-13
 ---
 
 It's common training that responders should be careful when clicking or navigating to any URL involved in an incident, not only because of the inherent danger but also to avoid generating an access log entry. An attacker is likely to be actively monitoring access logs for their callback infrastructure during a campaign. These access logs provide valuable information through positive confirmation that their payload was successful or that their infrastructure is being examined.

@@ -27,7 +27,7 @@ title = 'navsec'
   [[Languages.en-gb.menu.main]]
     pageRef="about"
     name = 'About'
-    url = '/about/'
+    url = '/about'
     weight = 30
 
 [Languages.en-gb.params]
