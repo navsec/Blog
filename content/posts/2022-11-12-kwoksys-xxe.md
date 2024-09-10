@@ -19,11 +19,12 @@ I spent a significant amount of time probing the application as an unauthenticat
 Eventually satisfied with my review of the unauthenticated scope, I decided to switch to probing the application as an authenticated user.
 
 After authenticating to the application we have access to a lot more modules to review. We'll focus on the RSS module.
-{{< figure src="/images/2022-11-12-kwoksys-xxe/Pasted image 20221112110829.png"}}
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112110829.png)
+
 
 Kwoksys allows an authenticated and sufficiently privileged user to be able to add a custom RSS feed.
 
-{{< figure src="/images/2022-11-12-kwoksys-xxe/Pasted image 20221112110829.png"
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112113053.png)
 
 RSS feeds traditionally use XML as the underlying data-interchange format. 
 
