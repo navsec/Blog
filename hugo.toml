@@ -1,5 +1,7 @@
 baseURL = 'https://www.navsec.net/'
 languageCode = 'en-us'
+defaultContentLanguage = "en-gb"
+
 title = 'navsec'
 [module]
   [[module.imports]]
