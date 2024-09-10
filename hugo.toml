@@ -31,14 +31,14 @@ title = 'navsec'
     weight = 30
 
 [Languages.en-gb.params]
-  sitename = "Awesome hugo blog"
+  sitename = "navsec"
   defaultColor = "dark" # set color mode: dark, light, auto
-  description = "Minimal Hugo blog theme with light and dark mode support"
+  description = "Technical Writeups"
   mainSections = ['posts']
   toc = true # set to false to disable table of contents 'globally'
   tocOpen = false # set to true to open table of contents by default
   goToTop = true # set to false to disable 'go to top' button
-  additionalScripts = ['js/custom.js', 'js/custom-2.js']
+  #additionalScripts = ['js/custom.js', 'js/custom-2.js']
   dateFormat = ""
   rssFeedDescription = "summary" # available options: 1) summary 2) full
 
