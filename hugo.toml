@@ -10,7 +10,7 @@ title = 'navsec'
 [Languages.en-gb]
   languageName = "English"
   languageCode = "en-gb"
-  contentDir = "content/en"
+  contentDir = "content/"
   weight = 1
 
   [Languages.en-gb.menu]
@@ -33,7 +33,7 @@ title = 'navsec'
 [Languages.en-gb.params]
   sitename = "navsec"
   defaultColor = "dark" # set color mode: dark, light, auto
-  description = "Technical Writeups"
+  description = "navsec"
   mainSections = ['posts']
   toc = true # set to false to disable table of contents 'globally'
   tocOpen = false # set to true to open table of contents by default
@@ -52,9 +52,9 @@ title = 'navsec'
 
 [Languages.en-gb.params.author]
   avatar = "moon.png"
-  intro = "Technical Writeups"
+  intro = "navsec"
   name = "navsec"
-  description = "Blog"
+  description = "Technical Writeups"
 
 
 [[params.socialIcons]]
