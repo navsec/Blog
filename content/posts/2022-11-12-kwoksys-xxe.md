@@ -19,12 +19,12 @@ I spent a significant amount of time probing the application as an unauthenticat
 Eventually satisfied with my review of the unauthenticated scope, I decided to switch to probing the application as an authenticated user.
 
 After authenticating to the application we have access to a lot more modules to review. We'll focus on the RSS module.
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112110829.png)
+![Image](/assets/images/2023-3-24-cyberapoc-23/Pasted-image-20230322185446.png)
 
 
 Kwoksys allows an authenticated and sufficiently privileged user to be able to add a custom RSS feed.
 
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112113053.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112113053.png)
 
 RSS feeds traditionally use XML as the underlying data-interchange format. 
 
@@ -57,15 +57,15 @@ As a security researcher this is definitely a component that deserves further at
 ### Code Review
 Decompiling the kwok-2.9.5.jar in JD-GUI, we see that logic for the RSS parser is contained under com.kwoksys.framework.parsers.rss.
 
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112113341.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112113341.png)
 
 The developers are using standard libraries to perform XML parsing and are using apache axiom libraries for XML modeling. They also appear to have some custom logic for RSS parsing defined in **com.kwoksys.framework.util.XmlUtils**. When reviewing code for vulnerabilities - custom code deserves serious scrutiny. Standard and popular 3rd party libraries are far less likely to contain vulnerabilities than custom code specific to the application being tested. Popular libraries have had more eyes on them and have been battle-tested while code custom to an application may have had a lot less attention and review. However, as we'll find out later in this post - we can't always assume that a third-party library has been brought into an application securely.
 
 Reviewing the custom code for XmlUtils, we see a single method that appears to append an XML version tag to an XML object that is passed to it.
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112115833.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112115833.png)
 
 Let's search for calls to the XmlUtils class within our RSS parsing classes to see where this is being done. Our search reveals that XmlUtils is only called one time and it's within the modelToXml class. Based on the class title - we can infer that this class is called when converting a model to XML.
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112115547.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112115547.png)
 
 Since this is converting from a model to XML - this custom code is being called after the incoming XML has already been parsed and converted into a model or when the application needs to convert other data into an XML format. This isn't helpful for us - we need to review the code that converts incoming XML to a model as that is where an XXE vulnerability would be present.
 
@@ -90,18 +90,18 @@ As we continue to read further into the method - we notice that the rest of the 
 
 At this point, we need to zero-in on the XMLInputFactory class since that contains the parser logic we are looking for. As we identified earlier, XMLInputFactory is sourced from **javax.xml.stream**. We need to figure out if XMLInputFactory supports external entities by default. We can review Oracle documentation for more information on the XMLInputFactory class. Since we know the newInstance() method is called, let's search for that.
 
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112123106.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112123106.png)
 
 It looks like the newInstance() method performs the same function as the newFactory() method. This is likely a legacy method and is still in-use to maintain backwards-compatability. Let's review the newFactory() method.
 
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112123237.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112123237.png)
 Reviewing the constants for XMLInputFactory we find:
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112124013.png)
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112124034.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112124013.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112124034.png)
 
 Now that we have found the property that configures external entity support - we can review the Oracle documentation to see what the default value is.
 
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112124115.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112124115.png)
 
 
 According to the documentation, the default value of the isSupportingExternalEntities is "Unspecified". It is unclear what that means or how the application will interpret this. We need to dig deeper into the standard library to understand how this is being implemented.
@@ -225,16 +225,16 @@ The following XXE payload can be used to confirm our theory
 If the parser is vulnerable, it will attempt to resolve the external entity "xxe" declared above. Since the external entity points to "file:///etc/passwd", the parser should include the content of the system's /etc/passwd file within the &xxe reference contained in the title tag.
 
 First, we host our malicious xml file on another server:
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112135504.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112135504.png)
 
 From within Kwoksys, we add a new RSS feed pointing to our web server
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112135615.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112135615.png)
 
 After clicking 'Add', we notice in our web server logs that Kwoksys has reached out for the XML file.
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112135946.png))
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112135946.png))
 
 Back on Kwoksys we see that there is a new blog entry which contains the contents of the system's /etc/passwd file in the blog post:
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112140030.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112140030.png)
 
 We have successfully exploited an external entity injection vulnerability. By changing the external entity value in the XML payload - we can now arbitrarily read any file on the servers filesystem.
 
@@ -256,10 +256,10 @@ As an example, let's say that the Kwoksys system can reach other systems within 
 ### Patch Review
 
 After reporting this to the Kwoksys team - they quickly deployed a patch [2.9.5.SP31] which addresses this. They took the report seriously and had a fix rolled out within days of first contact.
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112104410.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112104410.png)
 
 As this is an open source project, let's review the mitigations implemented by the developers.
-![Image](/images/2022-11-12-kwoksys-xxe/Pasted image 20221112142936.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112142936.png)
 
 The developers manually overrided 'IS_SUPPORTING_EXTERNAL_ENTITIES' to false to disable all support for external entities effectively eliminating the XXE vulnerability.
 
