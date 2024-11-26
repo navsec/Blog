@@ -239,7 +239,7 @@ Back on Kwoksys we see that there is a new blog entry which contains the content
 We have successfully exploited an external entity injection vulnerability. By changing the external entity value in the XML payload - we can now arbitrarily read any file on the servers filesystem.
 
 To speed up exploitation, we can build a python script to change the XML payload based on whatever file we specify, trigger a refresh of the RSS feed, then make a follow-up request to retrieve the new blog content and parse the response for the external entity. This provides us with a read-only psuedo shell to the system! Much faster!
-![Image](/images/2022-11-12-kwoksys-xxe/Pastedimage20221112141409.png)
+![Image](/images/2022-11-12-kwoksys-xxe/Pasted-image-20221112141409.png)
 
 <hr>
 
