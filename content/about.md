@@ -14,8 +14,8 @@ All content published on this blog is independently sourced and opinions are my 
 
 ---
 
-<div style="text-align: center">
-{{< figure src="/images/about/OSEP_Blog.png" >}}
-{{< figure src="/images/about/OSWE_Blog.png" >}}
-{{< figure src="/images/about/OSCP_Blog.png" >}}
-</div>
+{{< figure src="/images/about/OSEP_Blog.png" class="center" >}}
+
+{{< figure src="/images/about/OSWE_Blog.png" class="center" >}}
+
+{{< figure src="/images/about/OSCP_Blog.png" class="center" >}}
