@@ -10,14 +10,12 @@ For as long as I can remember I've had a special interest in manipulating techno
 
 All content published on this blog is independently sourced and opinions are my own. All research is independent and is not reflective of any employer past or present. Proof of concept exploit code is presented for educational purposes only.
 
-<p align="center">
-    <img height="400px" src="/static/images/about/meme.png">
-</p>
+{{< figure src="/images/about/meme.png" height="400" class="center" >}}
 
-<hr>
+---
 
-<p align="center">
-    <img src="/static/images/about/OSEP_Blog.png">
-    <img src="/static/images/about/OSWE_Blog.png">
-    <img src="/static/images/about/OSCP_Blog.png">
-</p>
+<div style="text-align: center">
+{{< figure src="/images/about/OSEP_Blog.png" >}}
+{{< figure src="/images/about/OSWE_Blog.png" >}}
+{{< figure src="/images/about/OSCP_Blog.png" >}}
+</div>
