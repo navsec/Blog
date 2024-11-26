@@ -51,7 +51,7 @@ title = 'navsec'
   display = "standalone"
 
 [Languages.en-gb.params.author]
-  avatar = "/static/images/moon.png"
+  avatar = "moon.png"
   intro = "navsec"
   name = "navsec"
   description = "Technical Writeups"
